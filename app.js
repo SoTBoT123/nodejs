@@ -1,21 +1,35 @@
-const express = require('express');
-const path = require('path');
-const indexRouter = require('./routes/index');
+const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
 
 const app = express();
-const PORT = 3000;
+const server = http.createServer(app);
+const io = new Server(server);
 
-// Serve static files from the "public" directory
-app.use(express.static(path.join(__dirname, 'public')));
+const PORT = 3000; // Change if needed
 
-// Use the router for handling routes
-app.use('/', indexRouter);
+// Serve a basic status endpoint
+app.get("/", (req, res) => {
+  res.send("WebSocket server is running.");
+});
 
-// Catch-all route for handling 404 errors
-app.use((req, res, next) => {
-    res.status(404).sendFile(path.join(__dirname, 'views', '404.html'));
+// Handle WebSocket connections
+io.on("connection", (socket) => {
+  console.log(`User connected: ${socket.id}`);
+
+  // Receive a message from a user
+  socket.on("send_message", (data) => {
+    console.log(`Message received from ${socket.id}: ${data}`);
+    // Broadcast the message to all other users
+    socket.broadcast.emit("receive_message", data);
   });
 
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}/`);
+  socket.on("disconnect", () => {
+    console.log(`User disconnected: ${socket.id}`);
+  });
+});
+
+// Start the server
+server.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
 });
